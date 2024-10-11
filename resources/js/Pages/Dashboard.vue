@@ -9,15 +9,20 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 const target = ref();
 
 const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xabcdef); 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.z = 0.5;
+
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(1350,520);//520
 document.body.appendChild(renderer.domElement);
 
-camera.position.z = 1;
+
 
 function animate() {
     requestAnimationFrame(animate);
+    //loader.rotation.x +=0.1;
+    //loader.rotation.y +=0.1;
     renderer.render(scene, camera);
 }
 animate();
@@ -30,21 +35,32 @@ onMounted(() => {
 const loader = new GLTFLoader();
 loader.load(
     'models/glb/brazo_v3.glb',
-    function (gltf) {
+    /*function (gltf) {
     scene.add(gltf.scene);
     gltf.animations; // Array<THREE.AnimationClip>
     gltf.scene; // THREE.Group
     gltf.scenes; // Array<THREE.Group>
     gltf.cameras; // Array<THREE.Camera>
     gltf.asset; // Object
-    },
-    function (xhr) {
+    }*/
+    (gltf) => {
+      const model = gltf.scene;
+      scene.add(model);
+
+      const animate = () => {
+        requestAnimationFrame(animate);
+        model.rotation.x += 0.01;
+        model.rotation.y += 0.01;
+        renderer.render(scene, camera);
+      };
+      animate();
+    /*function (xhr) {
         console.log((xhr.loaded / xhr.total * 100) + '% loaded');
     },
     function (error) {
     console.log('An error happened');
-    }
- );
+    }*/
+ });
 </script>
 
 <template>
