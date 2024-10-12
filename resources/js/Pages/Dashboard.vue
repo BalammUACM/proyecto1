@@ -9,7 +9,11 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 const target = ref();
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xabcdef); 
+scene.background = new THREE.Color(0xabcdef);
+// luz ambiental
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Luz blanca con intensidad 0.5
+scene.add(ambientLight);
+
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.z = 0.5;
 
