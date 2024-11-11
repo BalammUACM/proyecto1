@@ -53,8 +53,8 @@ loader.load(
 
       const animate = () => {
         requestAnimationFrame(animate);
-        model.rotation.x += 0.01;
-        model.rotation.y += 0.01;
+        //model.rotation.x += 0.01;
+        //model.rotation.y += 0.01;
         renderer.render(scene, camera);
       };
       animate();
