@@ -1,15 +1,11 @@
 <script setup>
 ///////////////////////////////LIBRERIAS//////////////////////////////////////////////////////////////////
-// Importar math.js
-import { pi , matrix , cos , sin , multiply, re, abs } from "mathjs";
-//////////////////////////////////////////////////////////////////////////////
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Welcome from '@/Components/Welcome.vue';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted,watch } from 'vue';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { CCDIKSolver, CCDIKHelper } from 'three/addons/animation/CCDIKSolver.js';
 /////////////////////////////////////////Escena///////////////////////////////////////////////////////////
 function closeOverlay() {
     const overlay = document.getElementById('overlayPanel');
@@ -27,156 +23,126 @@ scene.background = new THREE.Color(0xabcdef);
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Luz blanca con intensidad 0.5
 scene.add(ambientLight);
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.z = 0.5;
+camera.position.z = 0.00;
+camera.position.y = -0.57;
+camera.position.x = 0.00;
 //////////preparacion de modelo 3d ////////////////////////////////////////////////////////////////////////
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(1350,520);//520
 document.body.appendChild(renderer.domElement);
-//////////////////////////////  Montage  /////////////////////////////////////////////////////////////////
-onMounted(() => {
-  target.value.appendChild(renderer.domElement);
-  ///////////////// montar modelo 3D /////////////////////////////////////////////////////////////////////
-  const loader=new GLTFLoader();
-  const articulaciones = {}; // Guardará las referencias de las articulaciones
-  loader.load('models/glb/brazo_v3.glb',(gltf)=>{
-    const model=gltf.scene;
-    scene.add(model);
-    const axesHelper = new THREE.AxesHelper(5); // Tamaño del eje (5 unidades)
-    scene.add(axesHelper);
-    ////////////////rotar esenario
-    camera.lookAt(scene.position)
-    // Buscar las articulaciones
-    model.traverse((node) => {
-        //console.log("Nodo encontrado:", node.name); // Verifica la estructura completa
-        if(node.name=="Base"||node.name=="Eslabon0"||node.name=="Eslabon1"||node.name=="Eslabon2"){
-            console.log("Exito Encontrado: ",node.name,node);
-            articulaciones[node.name] = node;
-        }
-        });
-        if("Base"){
-            articulaciones["Base"].position.x=O_0_num[1]; 
-            articulaciones["Base"].position.y=O_0_num[2];
-            articulaciones["Base"].position.z=O_0_num[0];
-        }
-        if("Eslabon0"){
-            articulaciones["Eslabon0"].position.x=O_1_num[1];
-            articulaciones["Eslabon0"].rotation.y=O_1_num[2];
-            articulaciones["Eslabon0"].position.z=O_1_num[0];
-        }
-        if("Eslabon1"){
-            articulaciones["Eslabon1"].position.x=O_2_num[1];
-            articulaciones["Eslabon1"].rotation.y=O_2_num[2];
-            articulaciones["Eslabon1"].rotation.z=O_2_num[0];
-        }
-        
-    console.log("listo el modelo para trabajar");
-  });
-}, undefined, function ( error ) {
-    console.error( error );
-});
-// Animación
 // Inicializar controles de órbita después de la cámara y el renderizador
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; // Habilita amortiguación para un movimiento más fluido
 controls.dampingFactor = 0.05; // Ajusta la velocidad de amortiguación
 controls.rotateSpeed = 0.5; // Ajusta la sensibilidad de rotación
-const velocidad= 0.01;
+controls.enableRotate = false;  // Desactiva la rotación con el mouse
+//////////////////////////// Parte numerica Denavit Hartemberg /////////////////////////////////////////////
+// Parámetros del brazo robótico (longitudes de los eslabones)
+// Evento para mostrar las coordenadas de la cámara cuando los controles cambian
+/* controls.addEventListener('change', () => {
+    console.log(`Posición de la cámara: x=${camera.position.x.toFixed(2)}, y=${camera.position.y.toFixed(2)}, z=${camera.position.z.toFixed(2)}`);
+});  */
+const l1 = 0.12*0;
+const l2 = 0.24;
+const l3 = 0.03;
+const l4 = 0.28;
+
+// Variables para los sliders
+const q1Angle = ref(0);
+const q2Angle = ref(0);
+const q3Angle = ref(0);
+
+// Cargar el modelo GLB
+let robot;
+const loader = new GLTFLoader();
+loader.load('models/glb/brazo_v5.glb', function (gltf) {
+    robot = gltf.scene;
+    scene.add(robot);
+}, undefined, function (error) {
+    console.error(error);
+});
+// Crear una matriz de transformación usando los parámetros DH
+// Función para crear una matriz de transformación DH
+function dhMatrix(alpha, a, d, theta) {
+    const cosTheta = Math.cos(theta);
+    const sinTheta = Math.sin(theta);
+    const cosAlpha = Math.cos(alpha);
+    const sinAlpha = Math.sin(alpha);
+
+    return new THREE.Matrix4().set(
+        cosTheta, -sinTheta, 0, a,
+        sinTheta * cosAlpha, cosTheta * cosAlpha, -sinAlpha, -sinAlpha * d,
+        sinTheta * sinAlpha, cosTheta * sinAlpha, cosAlpha, cosAlpha * d,
+        0, 0, 0, 1
+    );
+}
+// Función para aplicar la matriz DH a un eslabón
+function applyDHTransform(eslabon, dhMatrix,origen) {
+    const x=dhMatrix.elements[0+4*3]+origen.x;
+    const y=dhMatrix.elements[1+4*3]+origen.y;
+    const z=dhMatrix.elements[2+4*3]+origen.z;
+    eslabon.setRotationFromMatrix(dhMatrix);
+    eslabon.position.set(x,y,z);
+}
+// Función para actualizar el brazo robótico según los ángulos de los sliders
+function updateRobot() {
+    if (!robot) return;  // Verificar si el modelo ha sido cargado
+
+    // Leer los ángulos de los sliders (convertir a radianes)
+    const q1 = THREE.MathUtils.degToRad(q1Angle.value);
+    const q2 = THREE.MathUtils.degToRad(q2Angle.value);
+    const q3 = THREE.MathUtils.degToRad(q3Angle.value);
+
+    // Matrices de transformación DH
+    const H_0_1 = dhMatrix(0, 0, l1, q1);
+    const H_1_2 = dhMatrix(Math.PI / 2, 0, 0, q2 + Math.PI / 2);
+    const H_2_3 = dhMatrix(0, l2, 0, -Math.PI / 2);
+    const H_3_4 = dhMatrix(0, l3, 0, q3);
+    const H_4_5 = dhMatrix(0, l4, 0, 0);
+
+    // Matrices acumulativas
+    const H_0_2 = new THREE.Matrix4().multiplyMatrices(H_0_1, H_1_2);
+    const H_0_3 = new THREE.Matrix4().multiplyMatrices(H_0_2, H_2_3);
+    const H_0_4 = new THREE.Matrix4().multiplyMatrices(H_0_3, H_3_4);
+    const H_0_5 = new THREE.Matrix4().multiplyMatrices(H_0_4, H_4_5);
+
+    // Aplicar las transformaciones a los eslabones del robot
+    const base = robot.getObjectByName('Base');
+    const eslabon0 = robot.getObjectByName('Eslabon0');
+    const eslabon1 = robot.getObjectByName('Eslabon1');
+    const eslabon2 = robot.getObjectByName('Eslabon2');
+    const origen=eslabon0.position.clone();// nuevo origen del robot
+
+    if (eslabon0) applyDHTransform(eslabon0, H_0_1,origen);
+    if (eslabon1) applyDHTransform(eslabon1, H_0_2,origen);
+    if (eslabon2) applyDHTransform(eslabon2, H_0_4,origen);
+
+    // Asegurarse de que se aplique la transformación
+    robot.updateMatrixWorld(true);
+}
+// Función de animación
 function animate() {
     requestAnimationFrame(animate);
+    controls.update();
     renderer.render(scene, camera);
-    if (controls) {
-        controls.update(); 
-    }
 }
-animate();
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////// Parte numerica Denavit Hartemberg /////////////////////////////////////////////
-// Parámetros numéricos
-const parametros = {
-  l1: 0.12,
-  l2: 0.24,
-  l3: 0.03,
-  l4: 0.28,
-  q1: 180 * (pi / 180),
-  q2: 45 * (pi / 180),
-  q3: -55 * (pi / 180),
-};
-// Definir variables numéricas directamente
-const q1 = parametros.q1;
-const q2 = parametros.q2;
-const q3 = parametros.q3;
-const l1 = parametros.l1;
-const l2 = parametros.l2;
-const l3 = parametros.l3;
-const l4 = parametros.l4;
-// Crear una matriz de transformación usando los parámetros DH
-function dhMatrix(alpha_i_1, a_i_1, d_i, theta_i) {
-  return matrix([
-    [redondear(cos(theta_i)), -redondear(sin(theta_i)), 0, a_i_1],
-    [redondear(sin(theta_i)) * redondear(cos(alpha_i_1)), redondear(cos(theta_i)) * redondear(cos(alpha_i_1)), -redondear(sin(alpha_i_1)), -redondear(sin(alpha_i_1)) * d_i,],
-    [redondear(sin(theta_i)) * redondear(sin(alpha_i_1)), redondear(cos(theta_i)) * redondear(sin(alpha_i_1)), redondear(cos(alpha_i_1)), redondear(cos(alpha_i_1)) * d_i,],
-    [0, 0, 0, 1],
-  ]);
-}
-//funcion para redondeo de numeros muy bajos 
-function redondear(num){
-  const tolerancia=1e-10;
-  if(abs(num)<tolerancia){
-    return 0;
-  }else{
-    return num;
-  }
-}
-// Matrices de transformación
-const H_0_1 = dhMatrix(0, 0, l1, q1);
-//console.log("transformacion",H_0_1)// prueba  de la matriz H_0_1
-const H_1_2 = dhMatrix((pi / 2), 0, 0, q2+ (pi/2));
-const H_2_3 = dhMatrix(0, l2, 0, -(pi / 2));
-const H_3_4 = dhMatrix(0, l3, 0, q3 );
-const H_4_5 = dhMatrix(0, l4, 0, 0);
-// Matrices acumulativas
-const H_0_2 = multiply(H_0_1, H_1_2);
-const H_0_3 = multiply(H_0_2, H_2_3);
-const H_0_4 = multiply(H_0_3, H_3_4);
-const H_0_5 = multiply(H_0_4, H_4_5);
-// Orígenes de los sistemas
-const O_0 = matrix([0, 0, 0, 1]);
-const O_1 = multiply(H_0_1, O_0);
-const O_2 = multiply(H_0_2, O_0);
-const O_3 = multiply(H_0_3, O_0);
-const O_4 = multiply(H_0_4, O_0);
-const O_5 = multiply(H_0_5, O_0);
-////////////////////////////////////////////////Duda
-function convertirANumero(matrizSimbolica) {
-  const arrayNumerico = matrizSimbolica.toArray(); // Convertir a array
-  // Eliminar la última fila o el último elemento (correspondiente al valor homogéneo)
-  return arrayNumerico.slice(0, 3).map((fila) =>
-    Array.isArray(fila) ? fila.slice(0, 3) : fila
-  );
-}
-//////////////////////////////////////////////////
-// Orígenes numéricos
-const O_0_num = convertirANumero(O_0);
-const O_1_num = convertirANumero(O_1);
-const O_2_num = convertirANumero(O_2);
-const O_3_num = convertirANumero(O_3);
-const O_4_num = convertirANumero(O_4);
-const O_5_num = convertirANumero(O_5);
-// Imprimir resultados
-console.log('O_0_num:', O_0_num);
-console.log('O_1_num:', O_1_num);
-console.log('O_2_num:', O_2_num);
-console.log('O_3_num:', O_3_num);
-console.log('O_4_num:', O_4_num);
-console.log('O_5_num:', O_5_num);
-////////////////////////////////////////////////////////////////////////////
+// Inicializar la escena y el robot al montar el componente
+onMounted(() => {
+    target.value.appendChild(renderer.domElement);
+    animate();
+    updateRobot();
+});
+// Observadores para los sliders
+watch([q1Angle, q2Angle, q3Angle], () => {
+    updateRobot();  // Llamar a la función para actualizar el robot
+});
+
 
 </script>
-
 <template>
     <AppLayout title="Dashboard">
         <nav class="bg-[#15803d] shadow-lg p-4 flex justify-between items-center">
-            <div class="text-xl text-gray-100">Proyecto Brazo de Dragon</div>
+            <div class="text-xl text-gray-100">Proyecto Brazo Dragón</div>
             <div class="flex items-center space-x-4">
                 <button id="openButton" @click.left="()=>abrirOverlay()" class="text-gray-300 hover:text-gray-100 focus:outline-none">
                     <!-- Hamburger Icon (SVG) -->
@@ -199,7 +165,7 @@ console.log('O_5_num:', O_5_num);
             </button>
             <form class="bg-white rounded px-8 pt-6 pb-8 mb-4">
                 <h2 class="text-2xl font-bold mb-6 text-center">Proyecto Brazo de Dragon</h2>
-                <div class="mb-4">
+                    <div class="mb-4">
                         <label for="nombre" class="block text-gray-700 text-sm font-bold mb-2">Nombre:</label>
                         <input type="text" id="nombre" name="nombre" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
                     </div>
@@ -207,77 +173,43 @@ console.log('O_5_num:', O_5_num);
                         <label for="email" class="block text-gray-700 text-sm font-bold mb-2">Correo Electrónico:</label>
                         <input type="email" id="email" name="email" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
                     </div>
-                    <div class="mb-4">
-                        <label for="password" class="block text-gray-700 text-sm font-bold mb-2">Contraseña:</label>
-                        <input type="password" id="password" name="password" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
-                    </div>
-                    <div class="mb-6">
-                        <label for="password_confirmation" class="block text-gray-700 text-sm font-bold mb-2">Confirmar Contraseña:</label>
-                        <input type="password" id="password_confirmation" name="password_confirmation" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
-                    </div>
+                    
                     <div class="flex items-center justify-between">
                         <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Registrar</button>
                     </div>
                     <div class="mb-4">
-                        <!--<label for="nombre" class="block text-gray-700 text-sm font-bold mb-2">Eslabon 0:</label>
-                        <input id="eslabon_0" type="range" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" v-model="inputValue" min="0" max="360" step="10" required>
-                        <p id="value_0">Value:{{ inputValue }}</p>-->
-                        <div v-for="(slider, index) in sliders" :key="index" class="slider">
-                            <label :for="`slider_${index}`">Slider {{ index + 1 }}:</label>
-                            <input
-                                type="range"
-                                :id="`slider_${index}`"
-                                v-model="slider.value"
-                                :min="slider.min"
-                                :max="slider.max"
-                                :step="slider.step"
-                            />
-                            <p>Valor: {{ slider.value }}</p>
+                        <div class="control-panel">
+                            <label>
+                                Articulación 1 (q1):
+                                <input type="range" v-model="q1Angle" min="-180" max="180" step="1" />
+                                {{ q1Angle }}°
+                            </label>
+                            <br />
+                            <label>
+                                Articulación 2 (q2):
+                                <input type="range" v-model="q2Angle" min="-90" max="90" step="1" />
+                                {{ q2Angle }}°
+                            </label>
+                            <br />
+                            <label>
+                                Articulación 3 (q3):
+                                <input type="range" v-model="q3Angle" min="-90" max="90" step="1" />
+                                {{ q3Angle }}°
+                            </label>
                         </div>
                     </div>
-                    <!--
-                    <div class="mb-4">
-                        <label for="email" class="block text-gray-700 text-sm font-bold mb-2">Eslabon 1:</label>
-                        <input type="range" id="eslabon_1"  class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" min="0" max="180" step="10" required>
-                        <p>Value: <output id="value_1"></output></p>
-                    </div>
-                    <div class="mb-4">
-                        <label for="password" class="block text-gray-700 text-sm font-bold mb-2">Eslabon 2:</label>
-                        <input type="range" id="eslabon_2"  class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" min="0" max="180" step="10" required>
-                        <p>Value: <output id="value_2"></output></p>
-                    </div>
-                    <div class="mb-6">
-                        <label for="password_confirmation" class="block text-gray-700 text-sm font-bold mb-2">Eslabon 3:</label>
-                        <input type="range" id="eslabon_3"  class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" min="0" max="180" step="10" required>
-                        <p>Value: <output id="value_3"></output></p>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Registrar</button>
-                    </div>-->
             </form>
         </div>    
     </AppLayout>  
 </template>
-<script>/*
-function closeOverlay() {
-    const overlay = document.getElementById('overlayPanel');
-    overlay.style.transform = 'translateX(100%)'; // Oculta el panel deslizándolo fuera de la vista
+<style>
+.control-panel {
+    
+    top: 10px;
+    left: 10px;
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 10px;
+    border-radius: 4px;
 }
-function abrirOverlay(){
-    const overlay = document.getElementById('overlayPanel');
-    overlay.style.transform = 'translateX(0%)'; // aparece el panel deslizándolo a la vista
-}*/
-export default {
-  data() {
-    return {
-      sliders: [
-        { value: 0, min: 0, max: 360, step: 10 }, // Slider 1
-        { value: 90, min: 0, max: 180, step: 10 },  // Slider 2
-        { value: 90, min: 0, max: 180, step: 10 }, // Slider 3
-        { value: 90, min: 0, max: 180, step: 10 }, // Slider 4
-      ],
-    };
-  },
-};
-</script>
+</style>
 
