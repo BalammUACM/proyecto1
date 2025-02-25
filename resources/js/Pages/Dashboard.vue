@@ -136,7 +136,27 @@ onMounted(() => {
 watch([q1Angle, q2Angle, q3Angle], () => {
     updateRobot();  // Llamar a la función para actualizar el robot
 });
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+import axios from "axios";
 
+const ip = "192.168.4.1"; // IP del robot
+const responseText = ref("");
+const command = ref(""); // Entrada para el usuario
+
+// Función para enviar comandos JSON al robot
+const sendCommand = async () => {
+  if (!command.value) return; // Evita enviar si el campo está vacío
+
+  const url = `http://${ip}/js?json=${encodeURIComponent(command.value)}`;
+
+  try {
+    const response = await axios.get(url);
+    responseText.value = response.data; // Muestra la respuesta del robot
+  } catch (error) {
+    responseText.value = "Error en la comunicación.";
+    console.error(error);
+  }
+};
 
 </script>
 <template>
@@ -198,6 +218,19 @@ watch([q1Angle, q2Angle, q3Angle], () => {
                             </label>
                         </div>
                     </div>
+                <!---->
+                    <div class="mb-4">
+                        <h1>Control del Robot</h1>
+
+                        <label>Comando JSON:</label>
+                        <input v-model="command" type="text" placeholder='{"cmd":"mover","dir":"adelante"}' />
+
+                        <button @click="sendCommand">Enviar Comando</button>
+
+                        <h3>Respuesta del Robot:</h3>
+                        <pre>{{ responseText }}</pre>
+                    </div>
+                    
             </form>
         </div>    
     </AppLayout>  
