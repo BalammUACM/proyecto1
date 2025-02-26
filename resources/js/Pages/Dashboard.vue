@@ -2,7 +2,7 @@
 ///////////////////////////////LIBRERIAS//////////////////////////////////////////////////////////////////
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Welcome from '@/Components/Welcome.vue';
-import { ref, onMounted,watch } from 'vue';
+import { ref, onMounted,watch,computed } from 'vue';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -135,13 +135,26 @@ onMounted(() => {
 // Observadores para los sliders
 watch([q1Angle, q2Angle, q3Angle], () => {
     updateRobot();  // Llamar a la función para actualizar el robot
+
 });
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 import axios from "axios";
 
 const ip = "192.168.4.1"; // IP del robot
 const responseText = ref("");
 const command = ref(""); // Entrada para el usuario
+const updateCommand = () => {
+  command.value = JSON.stringify({
+    T: 112,
+    b: q1Angle.value, // Aquí se usa el valor de q1Angle
+    s: q2Angle.value*(-1), // Puedes agregar más valores según lo necesites/////calibrada
+    e: q3Angle.value
+  }, null, 2);
+  console.log("JSON actualizado:", command.value); // Ver en consola
+};
+// Observar cambios en los sliders y actualizar `command`
+watch([q1Angle, q2Angle, q3Angle], updateCommand, { immediate: true });
 
 // Función para enviar comandos JSON al robot
 const sendCommand = async () => {
@@ -185,6 +198,7 @@ const sendCommand = async () => {
             </button>
             <form class="bg-white rounded px-8 pt-6 pb-8 mb-4">
                 <h2 class="text-2xl font-bold mb-6 text-center">Proyecto Brazo de Dragon</h2>
+                <!--
                     <div class="mb-4">
                         <label for="nombre" class="block text-gray-700 text-sm font-bold mb-2">Nombre:</label>
                         <input type="text" id="nombre" name="nombre" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
@@ -196,7 +210,7 @@ const sendCommand = async () => {
                     
                     <div class="flex items-center justify-between">
                         <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Registrar</button>
-                    </div>
+                    </div>-->
                     <div class="mb-4">
                         <div class="control-panel">
                             <label>
@@ -223,7 +237,7 @@ const sendCommand = async () => {
                         <h1>Control del Robot</h1>
 
                         <label>Comando JSON:</label>
-                        <input v-model="command" type="text" placeholder='{"cmd":"mover","dir":"adelante"}' />
+                        <textarea v-model="command" type="text" readonly />
 
                         <button @click="sendCommand">Enviar Comando</button>
 
