@@ -51,6 +51,7 @@ const l4 = 0.28;
 const q1Angle = ref(0);
 const q2Angle = ref(0);
 const q3Angle = ref(0);
+//const ang4=q3Angle+90;
 
 // Cargar el modelo GLB
 let robot;
@@ -146,24 +147,123 @@ const responseText = ref("");
 const command = ref(""); // Entrada para el usuario
 const updateCommand = () => {
   command.value = JSON.stringify({
-    T: 112,
+    T: 122,
     b: q1Angle.value, // Aquí se usa el valor de q1Angle
     s: q2Angle.value*(-1), // Puedes agregar más valores según lo necesites/////calibrada
-    e: q3Angle.value
+    e: parseInt(q3Angle.value)*(-1)+90,//calibrado y parseado 
+    h: 180,
+    spd: 10,
+    acc: 10
   }, null, 2);
   console.log("JSON actualizado:", command.value); // Ver en consola
 };
 // Observar cambios en los sliders y actualizar `command`
 watch([q1Angle, q2Angle, q3Angle], updateCommand, { immediate: true });
 
+const sendCommand2 = (event)=>{
+    command.value= JSON.stringify({
+        T:114,
+        led:255
+    })
+    const url = `http://${ip}/js?json=${encodeURIComponent(command.value)}`;
+    try {
+    event.preventDefault();
+    const response =  axios.get(url);
+    responseText.value = response.data; // Muestra la respuesta del robot
+    } catch (error) {
+    responseText.value = "Error en la comunicación.";
+    console.error(error);
+  }
+}
+
+const sendCommand3 = (event)=>{
+    command.value= JSON.stringify({
+
+        T:115,
+        spd: 10,
+        acc: 10
+        
+    })
+    const url = `http://${ip}/js?json=${encodeURIComponent(command.value)}`;
+    try {
+    event.preventDefault();
+    const response =  axios.get(url);
+    responseText.value = response.data; // Muestra la respuesta del robot
+    } catch (error) {
+    responseText.value = "Error en la comunicación.";
+    console.error(error);
+  }
+}
+
+const sendCommand4 = async ()=>{
+    command.value= JSON.stringify({
+
+        T:100
+        
+    })
+    const url = `http://${ip}/js?json=${encodeURIComponent(command.value)}`;
+    try {
+   // event.preventDefault();
+    const response =  axios.get(url);
+    responseText.value = response.data; // Muestra la respuesta del robot
+    } catch (error) {
+    responseText.value = "Error en la comunicación.";
+    console.error(error);
+  }
+}
+
+const sendCommand5 = (event)=>{
+    command.value= JSON.stringify({
+
+        T:122,
+        b: q1Angle.value, // Aquí se usa el valor de q1Angle
+        s: q2Angle.value*(-1), // Puedes agregar más valores según lo necesites/////calibrada
+        e: parseInt(q3Angle.value)*(-1)+90,//calibrado y parseado 
+        h:90
+        
+        
+    })
+    const url = `http://${ip}/js?json=${encodeURIComponent(command.value)}`;
+    try {
+    event.preventDefault();
+    const response =  axios.get(url);
+    responseText.value = response.data; // Muestra la respuesta del robot
+    } catch (error) {
+    responseText.value = "Error en la comunicación.";
+    console.error(error);
+  }
+}
+
+const sendCommand6 = (event)=>{
+    command.value= JSON.stringify({
+
+        T:122,
+        b: q1Angle.value, // Aquí se usa el valor de q1Angle
+        s: q2Angle.value*(-1), // Puedes agregar más valores según lo necesites/////calibrada
+        e: parseInt(q3Angle.value)*(-1)+90,//calibrado y parseado 
+        h:180
+        
+        
+    })
+    const url = `http://${ip}/js?json=${encodeURIComponent(command.value)}`;
+    try {
+    event.preventDefault();
+    const response =  axios.get(url);
+    responseText.value = response.data; // Muestra la respuesta del robot
+    } catch (error) {
+    responseText.value = "Error en la comunicación.";
+    console.error(error);
+  }
+}
 // Función para enviar comandos JSON al robot
-const sendCommand = async () => {
-  if (!command.value) return; // Evita enviar si el campo está vacío
+const sendCommand =  (event) => {
+  //if (!command.value) return; // Evita enviar si el campo está vacío
 
   const url = `http://${ip}/js?json=${encodeURIComponent(command.value)}`;
 
   try {
-    const response = await axios.get(url);
+    event.preventDefault();
+    const response =  axios.get(url);
     responseText.value = response.data; // Muestra la respuesta del robot
   } catch (error) {
     responseText.value = "Error en la comunicación.";
@@ -237,16 +337,38 @@ const sendCommand = async () => {
                         <h1>Control del Robot</h1>
 
                         <label>Comando JSON:</label>
-                        <textarea v-model="command" type="text" readonly />
+                        <textarea class="textarea-grande" v-model="command" type="text" readonly />
 
-                        <button @click="sendCommand">Enviar Comando</button>
+                        <button class="boton" @click="sendCommand"><pre>    Enviar comando    </pre></button>
 
                         <h3>Respuesta del Robot:</h3>
                         <pre>{{ responseText }}</pre>
                     </div>
+                    <div class="mb-4">
+                    
+
+                        <button class="boton" @click="sendCommand2"><pre>    encencer led    </pre></button>
+                        <br>
+                        <br>
+
+                        <button class="boton2" @click="sendCommand3"><pre>    apagar led    </pre></button>
+                        <br>
+                        <br>
+                        <button class="boton2" @click="sendCommand4"><pre>    Home   </pre></button>
+                        <br><br>
+                        <button class="boton2" @click="sendCommand5"><pre>    garra abre   </pre></button>
+                        <br><br>
+                        <button class="boton2" @click="sendCommand6"><pre>    garra cierra  </pre></button>
+
+                        
+                        <pre>{{ responseText }}</pre>
+                    </div>
+
                     
             </form>
-        </div>    
+        </div>   
+        
+      
     </AppLayout>  
 </template>
 <style>
@@ -257,6 +379,32 @@ const sendCommand = async () => {
     background-color: rgba(255, 255, 255, 0.8);
     padding: 10px;
     border-radius: 4px;
+
+}
+.boton {
+    background-color: rgb(59, 133, 245);
+    border: solid;
+    border-radius: 10px;
+}
+.boton2 {
+    background-color: rgb(59, 133, 245);
+    border: solid;
+    border-radius: 10px;
+}
+.boton:hover{
+    background-color: rgb(86, 240, 81);
+   
+}
+.boton2:hover{
+    background-color: rgb(235, 71, 30);
+   
+}
+.textarea-grande {
+        width: 80%;
+        height: 250px;
+    }
+pre{
+    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+    font-size: 20px;
 }
 </style>
-
