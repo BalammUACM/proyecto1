@@ -166,14 +166,9 @@ const sendCommand2 = (event)=>{
         led:255
     })
     const url = `http://${ip}/js?json=${encodeURIComponent(command.value)}`;
-    try {
     event.preventDefault();
     const response =  axios.get(url);
     responseText.value = response.data; // Muestra la respuesta del robot
-    } catch (error) {
-    responseText.value = "Error en la comunicación.";
-    console.error(error);
-  }
 }
 
 const sendCommand3 = (event)=>{
@@ -185,14 +180,9 @@ const sendCommand3 = (event)=>{
         
     })
     const url = `http://${ip}/js?json=${encodeURIComponent(command.value)}`;
-    try {
     event.preventDefault();
     const response =  axios.get(url);
     responseText.value = response.data; // Muestra la respuesta del robot
-    } catch (error) {
-    responseText.value = "Error en la comunicación.";
-    console.error(error);
-  }
 }
 
 const sendCommand4 = async ()=>{
@@ -202,14 +192,8 @@ const sendCommand4 = async ()=>{
         
     })
     const url = `http://${ip}/js?json=${encodeURIComponent(command.value)}`;
-    try {
-   // event.preventDefault();
     const response =  axios.get(url);
     responseText.value = response.data; // Muestra la respuesta del robot
-    } catch (error) {
-    responseText.value = "Error en la comunicación.";
-    console.error(error);
-  }
 }
 
 const sendCommand5 = (event)=>{
@@ -224,14 +208,9 @@ const sendCommand5 = (event)=>{
         
     })
     const url = `http://${ip}/js?json=${encodeURIComponent(command.value)}`;
-    try {
     event.preventDefault();
     const response =  axios.get(url);
     responseText.value = response.data; // Muestra la respuesta del robot
-    } catch (error) {
-    responseText.value = "Error en la comunicación.";
-    console.error(error);
-  }
 }
 
 const sendCommand6 = (event)=>{
@@ -246,14 +225,10 @@ const sendCommand6 = (event)=>{
         
     })
     const url = `http://${ip}/js?json=${encodeURIComponent(command.value)}`;
-    try {
     event.preventDefault();
     const response =  axios.get(url);
     responseText.value = response.data; // Muestra la respuesta del robot
-    } catch (error) {
-    responseText.value = "Error en la comunicación.";
-    console.error(error);
-  }
+   
 }
 // Función para enviar comandos JSON al robot
 const sendCommand =  (event) => {
@@ -273,7 +248,7 @@ const sendCommand =  (event) => {
 
 </script>
 <template>
-    <AppLayout title="Dashboard">
+    <AppLayout title="ROBOT">
         <nav class="bg-[#15803d] shadow-lg p-4 flex justify-between items-center">
             <div class="text-xl text-gray-100">Proyecto Brazo Dragón</div>
             <div class="flex items-center space-x-4">
@@ -298,19 +273,6 @@ const sendCommand =  (event) => {
             </button>
             <form class="bg-white rounded px-8 pt-6 pb-8 mb-4">
                 <h2 class="text-2xl font-bold mb-6 text-center">Proyecto Brazo de Dragon</h2>
-                <!--
-                    <div class="mb-4">
-                        <label for="nombre" class="block text-gray-700 text-sm font-bold mb-2">Nombre:</label>
-                        <input type="text" id="nombre" name="nombre" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
-                    </div>
-                    <div class="mb-4">
-                        <label for="email" class="block text-gray-700 text-sm font-bold mb-2">Correo Electrónico:</label>
-                        <input type="email" id="email" name="email" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
-                    </div>
-                    
-                    <div class="flex items-center justify-between">
-                        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Registrar</button>
-                    </div>-->
                     <div class="mb-4">
                         <div class="control-panel">
                             <label>
@@ -332,8 +294,8 @@ const sendCommand =  (event) => {
                             </label>
                         </div>
                     </div>
-                <!---->
                     <div class="mb-4">
+                        
                         <h1>Control del Robot</h1>
 
                         <label>Comando JSON:</label>
