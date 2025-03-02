@@ -26,7 +26,7 @@ const submit = () => {
 <template>
     <Head title="Register" />
 
-    <AuthenticationCard>
+    <AuthenticationCard class="fondo">
         <template #logo>
             <AuthenticationCardLogo />
         </template>
@@ -110,3 +110,9 @@ const submit = () => {
         </form>
     </AuthenticationCard>
 </template>
+<style>
+.fondo{
+    background-color: brown;
+}
+
+</style>

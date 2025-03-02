@@ -29,11 +29,11 @@ const submit = () => {
 };
 </script>
 
-<template>
+<template >
     <Head title="Log in" />
 
-    <AuthenticationCard>
-        <template #logo>
+    <AuthenticationCard class="fondo">
+        <template #logo >
             <AuthenticationCardLogo />
         </template>
 
@@ -88,3 +88,10 @@ const submit = () => {
         </form>
     </AuthenticationCard>
 </template>
+
+<style>
+.fondo{
+    background-color: brown;
+}
+
+</style>
