@@ -23,8 +23,8 @@ scene.background = new THREE.Color(0xabcdef);
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Luz blanca con intensidad 0.5
 scene.add(ambientLight);
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.z = 0.00;
-camera.position.y = -0.57;
+camera.position.z = 0.08;
+camera.position.y = -0.8;
 camera.position.x = 0.00;
 //////////preparacion de modelo 3d ////////////////////////////////////////////////////////////////////////
 const renderer = new THREE.WebGLRenderer();
@@ -56,9 +56,12 @@ const q3Angle = ref(0);
 // Cargar el modelo GLB
 let robot;
 const loader = new GLTFLoader();
-loader.load('models/glb/brazo_v5.glb', function (gltf) {
+loader.load('models/glb/brazo_v25_G.glb', function (gltf) {
     robot = gltf.scene;
     scene.add(robot);
+    //robot.rotation.x=Math.PI/2;
+    texture.flipY = false;
+
 }, undefined, function (error) {
     console.error(error);
 });
