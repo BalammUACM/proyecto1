@@ -91,7 +91,11 @@ const submit = () => {
 
 <style>
 .fondo{
-    background-color: brown;
+    background-image: url('/models/login6.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    min-height: 100vh;
 }
 
 </style>

@@ -55,11 +55,18 @@ const q3Angle = ref(0);
 
 // Cargar el modelo GLB
 let robot;
+let mesa; // Referencia a la mesa
 const loader = new GLTFLoader();
 loader.load('models/glb/brazo_v25_G.glb', function (gltf) {
     robot = gltf.scene;
     scene.add(robot);
-    //robot.rotation.x=Math.PI/2;
+    
+    // Obtener referencia a la mesa
+    mesa = robot.getObjectByName('Object_4');
+    if (mesa) {
+        console.log('Mesa encontrada para detección de colisiones');
+    }
+    
     texture.flipY = false;
 
 }, undefined, function (error) {
@@ -88,6 +95,35 @@ function applyDHTransform(eslabon, dhMatrix,origen) {
     eslabon.setRotationFromMatrix(dhMatrix);
     eslabon.position.set(x,y,z);
 }
+
+// Función para detectar colisiones con la mesa
+function detectarColisionConMesa() {
+    if (!robot || !mesa) return false;
+    
+    const eslabones = [
+        robot.getObjectByName('Eslabon0'),
+        robot.getObjectByName('Eslabon1'),
+        robot.getObjectByName('Eslabon2')
+    ];
+    
+    // Crear bounding box de la mesa
+    const mesaBox = new THREE.Box3().setFromObject(mesa);
+    
+    // Verificar colisión con cada eslabón
+    for (let eslabon of eslabones) {
+        if (eslabon) {
+            const eslabonBox = new THREE.Box3().setFromObject(eslabon);
+            if (mesaBox.intersectsBox(eslabonBox)) {
+                console.warn('¡COLISIÓN DETECTADA con la mesa!');
+                return true;
+            }
+        }
+    }
+    return false;
+}
+// Variables para almacenar ángulos anteriores
+let previousAngles = { q1: 0, q2: 0, q3: 0 };
+
 // Función para actualizar el brazo robótico según los ángulos de los sliders
 function updateRobot() {
     if (!robot) return;  // Verificar si el modelo ha sido cargado
@@ -103,13 +139,16 @@ function updateRobot() {
     const H_2_3 = dhMatrix(0, l2, 0, -Math.PI / 2);
     const H_3_4 = dhMatrix(0, l3, 0, q3);
     const H_4_5 = dhMatrix(0, l4, 0, 0);
-
     // Matrices acumulativas
     const H_0_2 = new THREE.Matrix4().multiplyMatrices(H_0_1, H_1_2);
     const H_0_3 = new THREE.Matrix4().multiplyMatrices(H_0_2, H_2_3);
     const H_0_4 = new THREE.Matrix4().multiplyMatrices(H_0_3, H_3_4);
     const H_0_5 = new THREE.Matrix4().multiplyMatrices(H_0_4, H_4_5);
 
+        const position = new THREE.Vector3();
+    position.setFromMatrixPosition(H_0_4);
+
+ 
     // Aplicar las transformaciones a los eslabones del robot
     const base = robot.getObjectByName('Base');
     const eslabon0 = robot.getObjectByName('Eslabon0');
@@ -123,6 +162,25 @@ function updateRobot() {
 
     // Asegurarse de que se aplique la transformación
     robot.updateMatrixWorld(true);
+    
+    // Detectar colisiones después de aplicar transformaciones
+    if (detectarColisionConMesa()) {
+        // Revertir a posición anterior si hay colisión
+        q1Angle.value = previousAngles.q1;
+        q2Angle.value = previousAngles.q2;
+        q3Angle.value = previousAngles.q3;
+        
+        // Mostrar alerta al usuario
+        alert('¡Movimiento bloqueado! El robot chocaría con la mesa.');
+        return;
+    }
+    
+    // Guardar ángulos actuales como anteriores
+    previousAngles = {
+        q1: q1Angle.value,
+        q2: q2Angle.value,
+        q3: q3Angle.value
+    };
 }
 // Función de animación
 function animate() {
@@ -189,16 +247,20 @@ const sendCommand3 = (event)=>{
 }
 
 const sendCommand4 = async ()=>{
+    // Actualizar robot virtual a posición home
+    q1Angle.value = 0;
+    q2Angle.value = 0;
+    q3Angle.value = 0;
+    
     command.value= JSON.stringify({
-
         T:100
-        
     })
     const url = `http://${ip}/js?json=${encodeURIComponent(command.value)}`;
     const response =  axios.get(url);
-    responseText.value = response.data; // Muestra la respuesta del robot
+    responseText.value = response.data;
 }
-
+//////////////////////////////////////////////////////////////////////////////////////////////
+// Botón para enviar comando de abrir pinza
 const sendCommand5 = (event)=>{
     command.value= JSON.stringify({
 
@@ -215,7 +277,7 @@ const sendCommand5 = (event)=>{
     const response =  axios.get(url);
     responseText.value = response.data; // Muestra la respuesta del robot
 }
-
+//Botón para enviar comando de cerrar pinza 
 const sendCommand6 = (event)=>{
     command.value= JSON.stringify({
 
@@ -233,6 +295,7 @@ const sendCommand6 = (event)=>{
     responseText.value = response.data; // Muestra la respuesta del robot
    
 }
+/////////////////////////////////////////////////////////////////////////////////////////////////////
 // Función para enviar comandos JSON al robot
 const sendCommand =  (event) => {
   //if (!command.value) return; // Evita enviar si el campo está vacío
@@ -247,6 +310,30 @@ const sendCommand =  (event) => {
     responseText.value = "Error en la comunicación.";
     console.error(error);
   }
+};
+
+// Función para mover el robot a la posición del Punto C
+const goToPositionC = () => {
+    q1Angle.value = 180;
+    q2Angle.value = 45;
+    q3Angle.value = -80;
+    
+    updateCommand(); 
+    
+    const fakeEvent = { preventDefault: () => {} }; 
+    sendCommand(fakeEvent);
+};
+
+// Función para mover el robot a la nueva secuencia
+const goToCustomPosition = () => {
+    q1Angle.value = -54;
+    q2Angle.value = -14;
+    q3Angle.value = -33;
+    
+    updateCommand(); 
+    
+    const fakeEvent = { preventDefault: () => {} }; 
+    sendCommand(fakeEvent);
 };
 
 </script>
@@ -274,7 +361,7 @@ const sendCommand =  (event) => {
                 class="text-xl absolute top-4 right-4 text-gray-500 hover:text-gray-700">×
                 
             </button>
-            <form class="bg-white rounded px-8 pt-6 pb-8 mb-4">
+            <div class="bg-white rounded px-8 pt-6 pb-8 mb-4">
                 <h2 class="text-2xl font-bold mb-6 text-center">Proyecto Brazo de Dragon</h2>
                     <div class="mb-4">
                         <div class="control-panel">
@@ -324,13 +411,31 @@ const sendCommand =  (event) => {
                         <button class="boton2" @click="sendCommand5"><pre>    garra abre   </pre></button>
                         <br><br>
                         <button class="boton2" @click="sendCommand6"><pre>    garra cierra  </pre></button>
+                        <br><br>
+                        <div class="image-buttons-row">
+                            <div class="image-button-container" @click="goToPositionC" title="Ángulos: 0°, 45°, -90°">
+                                <img src="models/movimiento1.png" alt="Punto C" class="position-image" />
+                                <p>Secuencia de movimientos A</p>
+                            </div>
+                            <div class="image-button-container" @click="goToCustomPosition" title="Ángulos: -54°, -14°, -33°">
+                                <img src="models/movimiento2.png" alt="Secuencia Personalizada" class="position-image" />
+                                <p>Secuencia de movimientos B
+
+
+
+
+
+
+                                </p>
+                            </div>
+                        </div>
 
                         
                         <pre>{{ responseText }}</pre>
                     </div>
 
                     
-            </form>
+            </div>
         </div>   
         
       
@@ -361,7 +466,7 @@ const sendCommand =  (event) => {
    
 }
 .boton2:hover{
-    background-color: rgb(235, 71, 30);
+    background-color: rgb(249, 238, 97);
    
 }
 .textarea-grande {
@@ -371,5 +476,115 @@ const sendCommand =  (event) => {
 pre{
     font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
     font-size: 20px;
+}
+.image-buttons-row {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+}
+.image-button-container {
+    cursor: pointer;
+    text-align: center;
+    padding: 5px;
+    border: 2px solid #3b85f5;
+    border-radius: 10px;
+    background-color: #f0f8ff;
+    transition: all 0.3s ease;
+    width: 50%;
+    margin: 0;
+}
+.image-button-container:hover {
+    background-color: #e6f3ff;
+    border-color: #2563eb;
+    transform: scale(1.05);
+}
+.position-image {
+    width: 120px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 5px; 
+    margin-bottom: 5px;
+}
+.image-label {
+    display: block;
+    font-size: 12px;
+    font-weight: bold;
+    color: #333;
+}
+
+/* Telefonos movil (320px - 768px) */
+@media (max-width: 768px) {
+    #overlayPanel {
+        width: 100%;
+        transform: translateX(100%);
+    }
+    .image-buttons-row {
+        flex-direction: column;
+    }
+    .image-button-container {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    .position-image {
+        width: 80px;
+        height: 60px;
+    }
+    .boton, .boton2 {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    .textarea-grande {
+        width: 95%;
+        height: 150px;
+    }
+    pre {
+        font-size: 16px;
+    }
+}
+
+/* Tablet (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+    #overlayPanel {
+        width: 40%;
+    }
+    .textarea-grande {
+        width: 90%;
+        height: 200px;
+    }
+    .position-image {
+        width: 100px;
+        height: 70px;
+    }
+    .boton, .boton2 {
+        font-size: 16px;
+    }
+}
+
+/* Escritorio (1025px - 1440px) */
+@media (min-width: 1025px) and (max-width: 1440px) {
+    #overlayPanel {
+        width: 30%;
+    }
+    .position-image {
+        width: 120px;
+        height: 80px;
+    }
+}
+
+/* Pantallas grandes de escritorio (1441px+) */
+@media (min-width: 1441px) {
+    #overlayPanel {
+        width: 25%;
+    }
+    .position-image {
+        width: 140px;
+        height: 90px;
+    }
+    .boton, .boton2 {
+        font-size: 18px;
+    }
+    pre {
+        font-size: 22px;
+    }
 }
 </style>
