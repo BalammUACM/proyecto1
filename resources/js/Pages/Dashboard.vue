@@ -362,7 +362,7 @@ const goToCustomPosition = () => {
                 
             </button>
             <div class="bg-white rounded px-8 pt-6 pb-8 mb-4">
-                <h2 class="text-2xl font-bold mb-6 text-center">Proyecto Brazo de Dragon</h2>
+                <h2 class="text-2xl font-bold mb-6 text-center">Panel de control</h2>
                     <div class="mb-4">
                         <div class="control-panel">
                             <label>
